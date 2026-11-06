@@ -29,6 +29,7 @@ const letters = (txt, extra = '') => (isDeva(txt) ? txt.split(/(\s+)/).filter(Bo
   `<span class="ch ${extra}" style="--i:${i}">${c.trim() === '' ? '&nbsp;' : esc(c)}</span>`).join('');
 const hiLine = name => `आप सभी को <b class="nm">${esc(name)}</b> की तरफ से ढेर सारी शुभकामनाएं`;
 const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200); };
+const isTouch = matchMedia('(pointer:coarse)').matches;
 
 /* ------------------------------------------------------------------- sound */
 let actx = null, soundOn = false, noiseBuf = null;
@@ -69,9 +70,15 @@ const FX = {
   c: $('#fx'), ps: [], raf: 0, emit: null, t0: 0, last: 0, click: null,
   init() {
     this.x = this.c.getContext('2d');
-    const rs = () => { const d = Math.min(devicePixelRatio || 1, 2); this.w = innerWidth; this.h = innerHeight; this.c.width = this.w * d; this.c.height = this.h * d; this.x.setTransform(d, 0, 0, d, 0, 0); };
-    rs(); addEventListener('resize', rs);
-    this.c.addEventListener('pointerdown', e => this.click && this.click(e.clientX, e.clientY));
+    const rs = () => {
+      // fewer pixels on phones/tablets keeps the animation smooth
+      const d = Math.min(devicePixelRatio || 1, isTouch ? 1.5 : 2);
+      this.w = innerWidth; this.h = innerHeight; this.c.width = this.w * d; this.c.height = this.h * d; this.x.setTransform(d, 0, 0, d, 0, 0);
+    };
+    rs(); addEventListener('resize', rs); addEventListener('orientationchange', () => setTimeout(rs, 300));
+    // taps anywhere (except on buttons, links and inputs) trigger the scene's burst; the canvas itself never blocks touches
+    addEventListener('pointerdown', e => { if (!this.click || e.target.closest('button,a,input,label,#ctrl')) return; this.click(e.clientX, e.clientY); });
+    document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
   },
   start(emit, click) {
     this.stop(); this.emit = emit; this.click = click; this.t0 = performance.now(); this.last = this.t0;
@@ -79,7 +86,7 @@ const FX = {
     this.raf = requestAnimationFrame(loop);
   },
   stop() { cancelAnimationFrame(this.raf); this.ps = []; this.emit = this.click = null; this.x && this.x.clearRect(0, 0, this.w, this.h); },
-  add(p) { this.ps.push({ x: 0, y: 0, vx: 0, vy: 0, g: 0, age: 0, max: 3, size: 4, rot: 0, vr: 0, type: 'spark', color: '#fff', sway: 0, ...p }); },
+  add(p) { if (this.ps.length < (isTouch ? 700 : 1200)) this.ps.push({ x: 0, y: 0, vx: 0, vy: 0, g: 0, age: 0, max: 3, size: 4, rot: 0, vr: 0, type: 'spark', color: '#fff', sway: 0, ...p }); },
   step(now) {
     const dt = Math.min((now - this.last) / 1000, 0.05); this.last = now;
     const t = (now - this.t0) / 1000;
@@ -146,14 +153,14 @@ const FX = {
   explode(x, y, kind = 'peony', pal) {
     pal = pal || PALS[(Math.random() * PALS.length) | 0];
     const S = Math.min(1.2, Math.max(.55, Math.min(this.w, this.h) / 700)) * rnd(170, 240);
-    const willow = kind === 'willow', ring = kind === 'ring';
+    const willow = kind === 'willow', ring = kind === 'ring', m = isTouch ? .7 : 1;
     this.add({ type: 'flash', x, y, size: S * .55, max: .35, fade: 1, color: willow ? '#ffcf6a' : pal[0] });
-    const n = ring ? 56 : willow ? 72 : 90;
+    const n = Math.round((ring ? 56 : willow ? 72 : 90) * m);
     for (let i = 0; i < n; i++) {
       const a = ring ? (i / n) * 6.283 : rnd(0, 6.283), v = ring ? S * rnd(.92, 1) : S * Math.cbrt(Math.random());
       this.add({ type: 'ember', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: willow ? 55 : 85, drag: willow ? 1.3 : 1.9, max: willow ? rnd(2.4, 3.2) : rnd(1.2, 1.9), size: rnd(1.3, 2.3), color: willow ? (Math.random() < .7 ? '#ffcf6a' : '#fff1c1') : pal[i % pal.length], fade: 1, tr: willow ? .1 : .05, crackle: Math.random() < .25 });
     }
-    if (ring) for (let i = 0; i < 30; i++) { const a = rnd(0, 6.283), v = S * .45 * Math.cbrt(Math.random()); this.add({ type: 'ember', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 80, drag: 2, max: rnd(1, 1.5), size: 1.6, color: pal[1], fade: 1 }); }
+    if (ring) for (let i = 0; i < 30 * m; i++) { const a = rnd(0, 6.283), v = S * .45 * Math.cbrt(Math.random()); this.add({ type: 'ember', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 80, drag: 2, max: rnd(1, 1.5), size: 1.6, color: pal[1], fade: 1 }); }
     boom();
   },
 };
@@ -161,7 +168,7 @@ const FX = {
 function sparkler(fx, dt) {
   document.querySelectorAll('.spk-tip').forEach(el => {
     const r = el.getBoundingClientRect(); if (!r.width || r.bottom < 0 || r.top > fx.h) return;
-    const cx = r.x + r.width / 2, cy = r.y + r.height / 2, n = Math.round(dt * 190 + Math.random());
+    const cx = r.x + r.width / 2, cy = r.y + r.height / 2, n = Math.round(dt * (isTouch ? 130 : 190) + Math.random());
     for (let i = 0; i < n; i++) { const a = rnd(0, 6.283), v = rnd(50, 230); fx.add({ type: 'ember', x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 170, drag: 1, max: rnd(.12, .5), size: rnd(.8, 1.6), color: Math.random() < .6 ? '#fff6d8' : '#ffd36a', fade: 1, tr: .06 }); }
   });
 }
@@ -242,7 +249,7 @@ function runDeepawali() {
     stars(fx, dt, 14);
     if (t > next) {
       if (first) { first = false; fx.rocket(fx.w / 2, fx.h + 10, fx.w / 2, fx.h * .26, 'peony', PALS[0]); next = 2.3; }
-      else { const tx = rnd(.1, .9) * fx.w; fx.rocket(tx + rnd(-60, 60), fx.h + 10, tx, rnd(.08, .38) * fx.h); next = t + rnd(1.1, 2.3); }
+      else { const tx = rnd(.1, .9) * fx.w; fx.rocket(tx + rnd(-60, 60), fx.h + 10, tx, rnd(.08, .38) * fx.h); next = t + rnd(1.1, 2.3) * (isTouch ? 1.3 : 1); }
     }
     if (sp) sparkler(fx, dt);
   }, (x, y) => FX.rocket(x, FX.h + 10, x, y));
@@ -445,7 +452,7 @@ function gate(name, onDone) {
       <div class="g-diya">${diya('', 0)}</div>
       <p class="g-hi"><b>${esc(name)}</b> ने आपके लिए दीपावली का संदेश भेजा है</p>
       <p class="g-en">${esc(name)} has sent you a Diwali greeting</p>
-      <button class="g-btn" type="button">🪔 दीया जलाएं <span>· Tap to light the diya</span></button>
+      <button class="g-btn" type="button">🪔 दीया जलाएं <span>· ${isTouch ? 'Tap' : 'Click'} to light the diya</span></button>
     </div></section>`;
   FX.start((dt, t, fx) => { if (Math.random() < dt * 8) fx.add({ type: 'ember', x: rnd(0, fx.w), y: fx.h + 5, vx: rnd(-8, 8), vy: -rnd(20, 60), max: rnd(4, 8), size: rnd(1, 2), color: '#ffb347', fade: 1, tr: .02 }); }, null);
   const g = $('.gate'); let lit = false;
@@ -477,9 +484,9 @@ function greet(name, key, msg, embed) {
   };
   const url = location.href.replace(/[?&]embed=1/, '');
   ctrl.innerHTML = embed ? '' : `
-    <button data-a="replay" title="Replay">↻ <span>Replay</span></button>
-    <button data-a="sound" title="Toggle sound"><b>🔕</b> <span>Sound</span></button>
-    <button data-a="share" title="Share">⤴ <span>Share</span></button>
+    <button data-a="replay" title="Replay" aria-label="Replay">↻ <span>Replay</span></button>
+    <button data-a="sound" title="Toggle sound" aria-label="Toggle sound"><b>🔕</b> <span>Sound</span></button>
+    <button data-a="share" title="Share" aria-label="Share">⤴ <span>Share</span></button>
     <a href="/" class="make">✨ <span>Make your own</span></a>`;
   const syncSound = () => { const b = $('[data-a=sound] b', ctrl); if (b) b.textContent = soundOn ? '🔔' : '🔕'; };
   ctrl.onclick = async e => {
@@ -488,7 +495,7 @@ function greet(name, key, msg, embed) {
     if (b.dataset.a === 'sound') { if (soundOn) soundOn = false; else { enableSound(); bell(3, .1); } syncSound(); }
     if (b.dataset.a === 'share') {
       const data = { title: `${name} wishes you a Happy Diwali`, text: `🪔 ${name} ने आपको दीपावली की शुभकामनाएं भेजी हैं`, url };
-      try { if (navigator.share) await navigator.share(data); else throw 0; } catch { try { await navigator.clipboard.writeText(url); toast('Link copied!'); } catch { prompt('Copy this link', url); } }
+      try { if (navigator.share) await navigator.share(data); else throw 0; } catch (err) { if (err && err.name === 'AbortError') return; try { await navigator.clipboard.writeText(url); toast('Link copied!'); } catch { prompt('Copy this link', url); } }
     }
   };
   if (embed) play(); else gate(name, play);
@@ -499,7 +506,7 @@ function home() {
   document.body.className = 'home'; document.title = 'शुभ दीपावली — Diwali Wishes';
   clearTimers(); $('#ctrl').innerHTML = '';
   const tcards = KEYS.map((k, i) => `
-    <label class="tcard"><input type="radio" name="tpl" value="${k}" ${i === 0 ? 'checked' : ''}>
+    <label class="tcard${i === 0 ? ' sel' : ''}"><input type="radio" name="tpl" value="${k}" ${i === 0 ? 'checked' : ''}>
       <span class="thumb th-${k}"></span><b>${TEMPLATES[k].name}</b><small>${TEMPLATES[k].blurb}</small></label>`).join('');
   $('#app').innerHTML = `
   <nav class="nav"><a class="logo" href="/">${diya('', 0)}<span>शुभ <em>दीपावली</em></span></a>
@@ -514,9 +521,9 @@ function home() {
     <h2 class="rv">अपना लिंक बनाएं <small>Create your own greeting link</small></h2>
     <div class="creator">
       <form class="card rv" id="f" autocomplete="off">
-        <label class="fld"><span>आपका नाम · Your name</span><input id="nm" maxlength="30" placeholder="e.g. Madhup or मधुप" required></label>
+        <label class="fld"><span>आपका नाम · Your name</span><input id="nm" maxlength="30" placeholder="e.g. Madhup or मधुप" autocapitalize="words" enterkeyhint="done" required></label>
         <fieldset class="tpls"><legend>Choose a style</legend>${tcards}</fieldset>
-        <label class="fld"><span>Personal message <em>(optional)</em></span><input id="ms" maxlength="90" placeholder="May this Diwali bring you light and joy"></label>
+        <label class="fld"><span>Personal message <em>(optional)</em></span><input id="ms" maxlength="90" placeholder="May this Diwali bring you light and joy" enterkeyhint="done"></label>
         <div class="linkbox"><span id="lk"></span><button type="button" id="cp">Copy</button></div>
         <div class="actions"><a class="btn pri" id="go" target="_blank" rel="noopener">▶ Open greeting</a><a class="btn wa" id="wa" target="_blank" rel="noopener">Share on WhatsApp</a></div>
       </form>
@@ -528,12 +535,12 @@ function home() {
   let sp = false; setTimeout(() => sp = true, 4700);
   FX.start((dt, t, fx) => {
     stars(fx, dt, 10);
-    if (scrollY < innerHeight * .6 && t > (FX.nf || 1)) { const x = rnd(.1, .9) * fx.w; fx.rocket(x + rnd(-50, 50), fx.h + 10, x, rnd(.08, .35) * fx.h); FX.nf = t + rnd(1.8, 3.2); }
+    if (scrollY < innerHeight * .6 && t > (FX.nf || 1)) { const x = rnd(.1, .9) * fx.w; fx.rocket(x + rnd(-50, 50), fx.h + 10, x, rnd(.08, .35) * fx.h); FX.nf = t + rnd(1.8, 3.2) * (isTouch ? 1.3 : 1); }
     if (sp) sparkler(fx, dt);
   }, null);
   FX.nf = 1;
 
-  const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('in')), { threshold: .15 });
+  const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('in')), { threshold: .1 });
   document.querySelectorAll('.rv').forEach(el => io.observe(el));
 
   const nm = $('#nm'), ms = $('#ms'), lk = $('#lk'), pv = $('#pv'), phone = $('.phone');
@@ -547,16 +554,19 @@ function home() {
     const s = state(), pretty = s.slug ? prettify(s.slug) : '';
     lk.textContent = s.full;
     $('.live-hi').textContent = pretty || 'आपके अपने'; $('.live-en').textContent = pretty || 'Your Name';
+    document.querySelectorAll('.tcard').forEach(c => c.classList.toggle('sel', c.querySelector('input').checked));
     $('#go').href = s.path; $('#wa').href = 'https://wa.me/?text=' + encodeURIComponent(`🪔 ${pretty || 'Someone'} ने आपको दीपावली की शुभकामनाएं भेजी हैं! ${s.full}`);
     $('#go').classList.toggle('off', !s.slug); $('#wa').classList.toggle('off', !s.slug);
-    clearTimeout(deb); deb = setTimeout(() => { pv.src = s.path + (s.path.includes('?') ? '&' : '?') + 'embed=1'; }, now ? 0 : 700);
+    // the live preview iframe is only shown on wide screens, so phones skip loading it
+    if (getComputedStyle($('.phonewrap')).display !== 'none') { clearTimeout(deb); deb = setTimeout(() => { pv.src = s.path + (s.path.includes('?') ? '&' : '?') + 'embed=1'; }, now ? 0 : 700); }
   };
   $('#f').addEventListener('input', () => update(false));
-  $('#f').addEventListener('submit', e => { e.preventDefault(); if (state().slug) window.open(state().path, '_blank'); });
+  $('#f').addEventListener('change', () => update(false));
+  $('#f').addEventListener('submit', e => { e.preventDefault(); document.activeElement && document.activeElement.blur(); });
   $('.actions').addEventListener('click', e => { if (e.target.closest('.off')) { e.preventDefault(); nm.focus(); toast('Enter your name first'); } });
   $('#cp').onclick = async () => { if (!state().slug) { nm.focus(); return toast('Enter your name first'); } try { await navigator.clipboard.writeText(state().full); toast('Link copied!'); } catch { prompt('Copy this link', state().full); } };
-  const fit = () => { const w = phone.parentElement.clientWidth; phone.style.setProperty('--k', Math.min(.8, w / 390)); };
-  addEventListener('resize', fit); fit(); update(true);
+  const fit = () => { const w = phone.parentElement.clientWidth; phone.style.setProperty('--k', Math.min(.8, w / 390)); update(true); };
+  addEventListener('resize', fit); fit();
 }
 
 /* ------------------------------------------------------------------ router */
