@@ -77,7 +77,7 @@ const FX = {
     };
     rs(); addEventListener('resize', rs); addEventListener('orientationchange', () => setTimeout(rs, 300));
     // taps anywhere (except on buttons, links and inputs) trigger the scene's burst; the canvas itself never blocks touches
-    addEventListener('pointerdown', e => { if (!this.click || e.target.closest('button,a,input,label,#ctrl')) return; this.click(e.clientX, e.clientY); });
+    addEventListener('pointerdown', e => { if (!this.click || e.target.closest('button,a,input,label,#ctrl,.imgsheet')) return; this.click(e.clientX, e.clientY); });
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
   },
   start(emit, click) {
@@ -323,9 +323,10 @@ function rangoli() {
   });
   return `<g transform="translate(200 452)">${out}<path d="M-88 0 A88 88 0 0 1 88 0" fill="none" stroke="#f9d27a" stroke-width="2" stroke-dasharray="1 5" stroke-linecap="round" class="rg" style="--i:30"/></g>`;
 }
+let STATIC = false; // true while building artwork for the downloadable image (doors drawn open, no dark overlay)
 function doorSvg(side) {
   const x = side === 'l' ? 95 : 200, hinge = side === 'l' ? 95 : 305, cx = x + 52.5;
-  return `<g class="door door-${side}" style="transform-origin:${hinge}px 275px">
+  return `<g class="door door-${side}" ${STATIC ? `transform="translate(${hinge} 0) scale(.17 1) translate(${-hinge} 0)"` : `style="transform-origin:${hinge}px 275px"`}>
     <rect x="${x}" y="190" width="105" height="170" fill="#7d1d2c"/>
     <rect x="${x + 8}" y="198" width="89" height="154" rx="2" fill="none" stroke="#a63a47" stroke-width="1.4"/>
     <g fill="none" stroke="#e5b878" stroke-width="1.3" stroke-linecap="round"><path d="M${cx} 214 V250 M${cx} 232 q-8 -4 -9 -12 M${cx} 232 q8 -4 9 -12 M${cx} 244 q-8 -4 -9 -12 M${cx} 244 q8 -4 9 -12"/><path d="M${cx} 288 V328 M${cx} 304 q-8 -4 -9 -12 M${cx} 304 q8 -4 9 -12 M${cx} 318 q-8 -4 -9 -12 M${cx} 318 q8 -4 9 -12"/></g>
@@ -357,7 +358,7 @@ function sceneDoors(name, msg) {
         <path d="${OPEN}" fill="url(#room)"/>
         <g opacity=".8"><path d="M140 362 V240 C140 215 175 205 200 175 C225 205 260 215 260 240 V362Z" fill="#ffd689"/><rect x="168" y="332" width="64" height="22" fill="#a9552e"/><ellipse cx="200" cy="332" rx="14" ry="3" fill="#7d3a1c"/><path d="M200 126 V142" stroke="#7d3a1c"/><path d="M193 142 H207 L205 158 H195Z" fill="#7d3a1c"/><circle class="lamp" cx="200" cy="150" r="4" fill="#ffe29a"/></g>
         <g clip-path="url(#openclip)"><g class="rays" fill="#fff6d0">${rays}</g></g>
-        <path class="dark" d="${OPEN}" fill="#4a1520"/>
+        ${STATIC ? '' : `<path class="dark" d="${OPEN}" fill="#4a1520"/>`}
       </g>
       ${doorSvg('l')}${doorSvg('r')}
       <g class="garl">${garland()}</g>
@@ -443,6 +444,213 @@ function runMidnight() {
 
 const SCENES = { deepawali: [sceneDeepawali, runDeepawali], lantern: [sceneLantern, runLantern], doors: [sceneDoors, runDoors], midnight: [sceneMidnight, runMidnight] };
 
+/* ------------------------------------------- greeting image (1080×1350 PNG) */
+const IW = 1080, IH = 1350;
+const IMG_CSS = `.m path,.m circle{fill:none;stroke:rgba(255,170,90,.22);stroke-width:1.1}.t1-art .rot path,.t1-art .rot circle{fill:none;stroke:rgba(255,215,200,.45);stroke-width:1.1}.frame{fill:none;stroke:rgba(255,185,130,.65);stroke-width:1.6}.f2{stroke:rgba(255,185,130,.3);stroke-width:1}.dots{stroke-dasharray:1 9;stroke-linecap:round;stroke-width:2.4!important}.rays path{opacity:.32}.lf{fill:#3f7d4a}.tstr{fill:none;stroke:#b98a4a;stroke-width:3}.leafc{fill:#3f8a3f}`;
+const IMG_FONTS = ['400 60px "Rozha One"', '400 60px "Tiro Devanagari Hindi"', '600 60px "Cormorant Garamond"', 'italic 500 60px "Cormorant Garamond"', '400 60px Yellowtail', '500 60px "Playfair Display"', 'italic 500 60px "Playfair Display"', '400 60px "DM Serif Display"', '300 60px Poppins'];
+let sr = Math.random; // seeded per image so the same greeting always gives the same picture
+const seeded = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const place = (svg, x, y, w, h) => svg.replace('<svg ', `<svg x="${x}" y="${y}" width="${w}" height="${h}" `);
+const firstSvg = html => html.match(/<svg[\s\S]*?<\/svg>/)[0];
+function svgToImage(svg, w, h) {
+  const defs = $('#gDiyaBowl').parentElement.outerHTML;
+  const s = svg.replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" `).replace('>', `>${defs}<style>${IMG_CSS}</style>`);
+  return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s); });
+}
+function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+const gradX = (c, x0, x1, stops) => { const g = c.createLinearGradient(x0, 0, x1, 0); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); return g; };
+const GOLD = ['#c98a2a', '#f3c766', '#fff0c2', '#f3c766', '#c98a2a'];
+function fitFont(c, text, font, size, maxW) { let s = size; c.font = font(s); while (c.measureText(text).width > maxW && s > 12) { s -= 2; c.font = font(s); } return s; }
+// centred single line, shrunk to fit; fill can be a colour or (x0,x1)=>gradient
+function cText(c, text, y, font, size, fill, maxW = IW - 140) {
+  fitFont(c, text, font, size, maxW); const w = c.measureText(text).width, x = IW / 2 - w / 2;
+  c.textAlign = 'left'; c.fillStyle = typeof fill === 'function' ? fill(x, x + w) : fill; c.fillText(text, x, y);
+}
+function spaced(c, text, y, font, sp, fill) {
+  c.font = font; const ch = [...text], ws = ch.map(t => c.measureText(t).width), tot = ws.reduce((a, b) => a + b, 0) + sp * (ch.length - 1);
+  let x = IW / 2 - tot / 2; c.textAlign = 'left'; c.fillStyle = fill; ch.forEach((t, i) => { c.fillText(t, x, y); x += ws[i] + sp; });
+}
+// Word-wrapped, centred text made of differently styled pieces. Returns the y after the last line.
+function rich(c, segs, y, maxW, lh, dry) {
+  const toks = []; segs.forEach(s => s.t.split(/( +)/).filter(Boolean).forEach(w => toks.push({ ...s, t: w })));
+  const lines = [[]]; let w = 0;
+  toks.forEach(tk => {
+    c.font = tk.font; const tw = c.measureText(tk.t).width, line = lines[lines.length - 1];
+    if (!tk.t.trim() && !line.length) return;
+    if (w + tw > maxW && line.length && tk.t.trim()) { lines.push([]); w = 0; }
+    lines[lines.length - 1].push({ ...tk, w: tw }); w += tw;
+  });
+  if (!dry) lines.forEach((ln, i) => {
+    while (ln.length && !ln[ln.length - 1].t.trim()) ln.pop();
+    const tot = ln.reduce((a, b) => a + b.w, 0); let x = IW / 2 - tot / 2; c.textAlign = 'left';
+    ln.forEach(tk => { c.font = tk.font; c.fillStyle = typeof tk.fill === 'function' ? tk.fill(x, x + tk.w) : tk.fill; c.fillText(tk.t, x, y + i * lh); x += tk.w; });
+  });
+  return y + lines.length * lh;
+}
+function burst(c, x, y, r, cols) {
+  c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+  for (let i = 0; i < 72; i++) {
+    const a = i / 72 * 6.283 + sr() * .06, r1 = r * (.2 + sr() * .25), r2 = r * (.72 + sr() * .32), col = cols[i % cols.length], droop = r2 * .1;
+    const x1 = x + Math.cos(a) * r1, y1 = y + Math.sin(a) * r1, x2 = x + Math.cos(a) * r2, y2 = y + Math.sin(a) * r2 + droop;
+    const g = c.createLinearGradient(x1, y1, x2, y2); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, col);
+    c.strokeStyle = g; c.lineWidth = 2.6; c.beginPath(); c.moveTo(x1, y1); c.quadraticCurveTo((x1 + x2) / 2, (y1 + y2) / 2 - droop * .3, x2, y2); c.stroke();
+    c.fillStyle = col; c.beginPath(); c.arc(x2, y2, 2.8, 0, 7); c.fill();
+  }
+  const g = c.createRadialGradient(x, y, 0, x, y, r * .5); g.addColorStop(0, 'rgba(255,240,200,.35)'); g.addColorStop(1, 'rgba(255,240,200,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r * .5, 0, 7); c.fill();
+  c.restore();
+}
+function sparkle(c, x, y) {
+  c.save(); c.globalCompositeOperation = 'lighter';
+  const g = c.createRadialGradient(x, y, 0, x, y, 70); g.addColorStop(0, 'rgba(255,250,230,1)'); g.addColorStop(.15, 'rgba(255,226,150,.8)'); g.addColorStop(1, 'rgba(255,180,60,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, 70, 0, 7); c.fill();
+  c.lineCap = 'round';
+  for (let i = 0; i < 70; i++) { const a = sr() * 6.283, r1 = 8 + sr() * 20, r2 = r1 + 15 + sr() * 70; c.strokeStyle = sr() < .6 ? '#fff6d8' : '#ffd36a'; c.globalAlpha = .4 + sr() * .6; c.lineWidth = 1 + sr() * 1.6; c.beginPath(); c.moveTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); c.lineTo(x + Math.cos(a) * r2, y + Math.sin(a) * r2); c.stroke(); }
+  c.restore();
+}
+function dots(c, n, col, maxR = 2.2) { for (let i = 0; i < n; i++) { c.globalAlpha = .2 + sr() * .7; c.fillStyle = col; c.beginPath(); c.arc(sr() * IW, sr() * IH, .4 + sr() * maxR, 0, 7); c.fill(); } c.globalAlpha = 1; }
+function bgRadial(c, cx, cy, stops) { const g = c.createRadialGradient(cx, cy, 30, cx, cy, 950); stops.forEach(([o, s]) => g.addColorStop(o, s)); c.fillStyle = g; c.fillRect(0, 0, IW, IH); }
+function footer(c, col) { c.font = '300 24px Poppins'; c.fillStyle = col; c.textAlign = 'center'; c.fillText(`Make yours ✦ ${location.host}`, IW / 2, IH - 28); c.textAlign = 'left'; }
+const glow = (c, col, blur) => { c.shadowColor = col; c.shadowBlur = blur; };
+const noGlow = c => { c.shadowColor = 'transparent'; c.shadowBlur = 0; };
+
+async function imgDeepawali(c, name, msg) {
+  bgRadial(c, 540, 470, [[0, '#2e1334'], [.55, '#13081d'], [1, '#0b0614']]);
+  dots(c, 150, '#ffe9a8');
+  burst(c, 170, 340, 150, ['#ffd36a', '#fff1c1', '#ffb347']); burst(c, 930, 300, 125, ['#ff7ad9', '#ffd1f0', '#ffffff']);
+  burst(c, 70, 975, 55, ['#7ef0c4', '#d6fff0', '#ffd36a']);
+  // measure the message card first so the diyas can sit below it
+  const F = { hi: '400 50px "Tiro Devanagari Hindi"', nm: '400 52px "Rozha One"', en: 'italic 500 31px "Cormorant Garamond"', enB: '600 31px "Cormorant Garamond"', msg: 'italic 500 33px "Cormorant Garamond"' };
+  const nameGold = (x0, x1) => gradX(c, x0, x1, ['#e9a93a', '#ffd36a', '#fff2c8', '#ffd36a']);
+  const line1 = [{ t: 'आप सभी को ', font: F.hi, fill: '#fff4e2' }, { t: name, font: F.nm, fill: nameGold }, { t: ' की\u00A0तरफ\u00A0से', font: F.hi, fill: '#fff4e2' }];
+  const enSeg = [{ t: name, font: F.enB, fill: '#f3c766' }, { t: ' wishes you a Happy Diwali — may your year sparkle with love, laughter & light.', font: F.en, fill: 'rgba(255,236,210,.78)' }];
+  const layout = dry => { let y = rich(c, line1, 650, 780, 70, dry); y = rich(c, [{ t: 'ढेर सारी शुभकामनाएं', font: F.hi, fill: '#fff4e2' }], y, 780, 70, dry); const dy = y + 6; y = rich(c, enSeg, y + 62, 760, 42, dry); if (msg) y = rich(c, [{ t: `“${msg}”`, font: F.msg, fill: '#ffd9a0' }], y + 8, 760, 44, dry); return [dy, y]; };
+  const [divY, endY] = layout(true), cardB = endY + 6, shift = Math.min(70, Math.max(0, cardB + 25 - 1000));
+  let art = `<svg viewBox="0 0 1080 1350"><g class="m" transform="translate(${540 - 200 * 2.4} ${650 - 400 * 2.4}) scale(2.4)">${mandala()}</g><path class="tstr" d="M-20 40 Q540 210 1100 40"/>`;
+  for (let i = 0; i < 11; i++) {
+    const x = (i + .5) / 11 * 1080, t = (x + 20) / 1120, y = (1 - t) ** 2 * 40 + 2 * (1 - t) * t * 210 + t * t * 40, s = i % 2 ? 66 : 88;
+    if (i % 4 === 2) art += `<ellipse class="leafc" cx="${x - 13}" cy="${y - 2}" rx="12" ry="21" transform="rotate(-35 ${x - 13} ${y - 2})"/><ellipse class="leafc" cx="${x + 13}" cy="${y - 2}" rx="12" ry="21" transform="rotate(35 ${x + 13} ${y - 2})"/>`;
+    art += place(marigold(i % 3 === 1), x - s / 2, y - s * .18, s, s);
+  }
+  art += place(diya(), 190, 1062 + shift, 170, 184) + place(diya(), 425, 1000 + shift, 230, 249) + place(diya(), 720, 1062 + shift, 170, 184);
+  art += `<path d="M950 ${1250 + shift} L922 ${1118 + shift}" stroke="#5a5a5a" stroke-width="5" stroke-linecap="round"/></svg>`;
+  c.drawImage(await svgToImage(art, IW, IH), 0, 0);
+  sparkle(c, 921, 1114 + shift);
+  // badge
+  c.font = '400 25px "Tiro Devanagari Hindi"'; const bt = '✦  दीपावली महोत्सव  ·  FESTIVAL OF LIGHTS', bw = c.measureText(bt).width + 60;
+  rrect(c, IW / 2 - bw / 2, 200, bw, 54, 27); c.fillStyle = 'rgba(20,8,20,.6)'; c.fill(); c.strokeStyle = 'rgba(243,199,102,.4)'; c.lineWidth = 1.5; c.stroke();
+  c.fillStyle = '#f3c766'; c.fillText(bt, IW / 2 - bw / 2 + 30, 236);
+  // title
+  glow(c, 'rgba(255,160,50,.55)', 50); cText(c, 'शुभ दीपावली', 432, s => `400 ${s}px "Rozha One"`, 168, (a, b) => gradX(c, a, b, GOLD), 900); noGlow(c);
+  spaced(c, 'HAPPY DIWALI', 508, '600 40px "Cormorant Garamond"', 18, '#f6dca0');
+  // card
+  rrect(c, 100, 555, 880, cardB - 555 + 34, 34); c.fillStyle = 'rgba(255,255,255,.06)'; c.fill(); c.strokeStyle = 'rgba(243,199,102,.3)'; c.lineWidth = 2; c.stroke();
+  layout(false);
+  c.strokeStyle = 'rgba(243,199,102,.6)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(380, divY + 14); c.lineTo(500, divY + 14); c.moveTo(580, divY + 14); c.lineTo(700, divY + 14); c.stroke();
+  c.fillStyle = '#ffbe3b'; [510, 570].forEach(x => { c.beginPath(); c.arc(x, divY + 14, 9, 0, 7); c.fill(); }); c.fillStyle = '#ffd76a'; c.beginPath(); c.ellipse(540, divY + 10, 6, 13, 0, 0, 7); c.fill();
+  footer(c, 'rgba(255,230,200,.45)');
+}
+
+function drawLantern(c, x, y, s) {
+  const w = 62 * s, h = 84 * s; c.save(); c.translate(x, y); c.rotate((sr() - .5) * .2);
+  glow(c, 'rgba(255,150,40,.9)', 45 * s);
+  const g = c.createLinearGradient(0, -h / 2, 0, h / 2); g.addColorStop(0, '#ffcb45'); g.addColorStop(.7, '#ff8a1f'); g.addColorStop(1, '#e8631a');
+  c.fillStyle = g; c.beginPath(); c.moveTo(-w * .38, -h / 2); c.quadraticCurveTo(0, -h * .62, w * .38, -h / 2); c.quadraticCurveTo(w * .55, 0, w * .4, h / 2); c.lineTo(-w * .4, h / 2); c.quadraticCurveTo(-w * .55, 0, -w * .38, -h / 2); c.fill();
+  noGlow(c); const l = c.createRadialGradient(0, h * .3, 0, 0, h * .3, w * .35); l.addColorStop(0, '#fff6b8'); l.addColorStop(1, 'rgba(255,210,74,0)'); c.fillStyle = l; c.beginPath(); c.arc(0, h * .3, w * .35, 0, 7); c.fill();
+  c.restore();
+}
+async function imgLantern(c, name, msg) {
+  bgRadial(c, 540, 620, [[0, '#ee2c55'], [.42, '#cc1a45'], [1, '#7e0a28']]);
+  dots(c, 130, '#ffe9a8', 2.6);
+  burst(c, 190, 1080, 120, ['#ffe45a', '#ffc23d', '#ffffff']); burst(c, 900, 230, 100, ['#ffe45a', '#ffd1f0', '#ffffff']);
+  const k = IH / 800; c.drawImage(await svgToImage(firstSvg(sceneLantern(name, msg)), 400 * k, IH), (IW - 400 * k) / 2, 0);
+  [[95, 560, 1.2], [140, 880, .9], [70, 1240, 1.4], [985, 1180, 1.3], [945, 830, 1], [1010, 520, .8], [215, 210, .75], [870, 1290, .7], [60, 120, .7]].forEach(([x, y, s]) => drawLantern(c, x, y, s));
+  glow(c, 'rgba(255,200,90,.5)', 20);
+  cText(c, 'शुभ दीपावली', 440, s => `400 ${s}px "Rozha One"`, 48, '#ffe27a', 460);
+  cText(c, name, 528, s => `400 ${s}px Yellowtail`, 84, '#fff4cf', 470); noGlow(c);
+  spaced(c, 'WISHES YOU A', 578, '300 20px Poppins', 9, '#ffe0d0');
+  cText(c, 'Happy', 668, s => `400 ${s}px Yellowtail`, 66, '#ffffff');
+  glow(c, 'rgba(255,210,90,.6)', 30); cText(c, 'Diwali', 848, s => `400 ${s}px Yellowtail`, 205, (a, b) => gradX(c, a, b, ['#ffe95c', '#ffc23d', '#fff6c8', '#ffc23d', '#ff9f4a']), 520); noGlow(c);
+  let y = rich(c, [{ t: 'आप सभी को ', font: '400 31px "Tiro Devanagari Hindi"', fill: '#ffeadf' }, { t: name, font: '400 33px "Rozha One"', fill: '#ffe45a' }, { t: ' की\u00A0तरफ\u00A0से ढेर\u00A0सारी\u00A0शुभकामनाएं', font: '400 31px "Tiro Devanagari Hindi"', fill: '#ffeadf' }], 918, 440, 48);
+  if (msg) rich(c, [{ t: msg, font: 'italic 500 26px "Playfair Display"', fill: '#ffe9dc' }], y + 10, 420, 38);
+  footer(c, 'rgba(255,230,220,.6)');
+}
+
+async function imgDoors(c, name, msg) {
+  const g = c.createLinearGradient(0, 0, 0, IH); g.addColorStop(0, '#e6a08f'); g.addColorStop(.55, '#d27a6a'); g.addColorStop(1, '#b8594c'); c.fillStyle = g; c.fillRect(0, 0, IW, IH);
+  for (let i = 0; i < 46; i++) { c.save(); c.translate(sr() * IW, sr() * IH); c.rotate(sr() * 6.3); c.globalAlpha = .55 + sr() * .4; c.fillStyle = ['#f39c12', '#ffc531', '#e8503f', '#fffaf0'][i % 4]; c.beginPath(); c.ellipse(0, 0, 9 + sr() * 6, 5 + sr() * 3, 0, 0, 7); c.fill(); c.restore(); }
+  const ink = '#5a0f22';
+  cText(c, name, 118, s => `500 ${s}px "Playfair Display"`, 56, ink);
+  cText(c, 'wishes you a', 168, s => `italic 500 ${s}px "Playfair Display"`, 30, ink);
+  spaced(c, 'HAPPY', 232, '500 32px "Playfair Display"', 20, ink);
+  cText(c, 'Diwali', 400, s => `500 ${s}px "Playfair Display"`, 180, ink);
+  let y = rich(c, [{ t: 'आप सभी को ', font: '400 33px "Tiro Devanagari Hindi"', fill: ink }, { t: name, font: '400 35px "Rozha One"', fill: '#7d1d2c' }, { t: ' की\u00A0तरफ\u00A0से ढेर\u00A0सारी\u00A0शुभकामनाएं', font: '400 33px "Tiro Devanagari Hindi"', fill: ink }], 466, 900, 48);
+  y = rich(c, [{ t: msg || 'May every home glow with joy.', font: 'italic 500 30px "Playfair Display"', fill: ink }], y + 4, 880, 40);
+  STATIC = true; const svg = firstSvg(sceneDoors(name, msg)); STATIC = false;
+  const top = y + 10, h = IH - 60 - top, w = h * 400 / 470;
+  c.drawImage(await svgToImage(svg, w, h), (IW - w) / 2, top);
+  footer(c, 'rgba(90,15,34,.6)');
+}
+
+async function imgMidnight(c, name, msg) {
+  bgRadial(c, 540, 880, [[0, '#2f2260'], [.55, '#1c1340'], [1, '#100a28']]);
+  dots(c, 160, '#ffd36a', 2);
+  for (let i = 0; i < 26; i++) { const x = sr() * IW, y = sr() * IH, s = 9 + sr() * 9, w = Math.abs(Math.cos(sr() * 6.3)) * s + 1; c.fillStyle = '#f9b92e'; c.strokeStyle = '#c97b12'; c.lineWidth = 1.6; c.beginPath(); c.ellipse(x, y, w, s, 0, 0, 7); c.fill(); c.stroke(); c.beginPath(); c.ellipse(x, y, w * .6, s * .6, 0, 0, 7); c.stroke(); }
+  burst(c, 160, 230, 100, ['#ffcf6a', '#fff1c1']); burst(c, 930, 330, 85, ['#ffcf6a', '#fff1c1']);
+  cText(c, 'शुभ दीपावली', 112, s => `400 ${s}px "Rozha One"`, 46, '#ffd36a');
+  glow(c, 'rgba(255,140,60,.6)', 26); cText(c, name, 212, s => `400 ${s}px Yellowtail`, 96, '#ff9a4a'); noGlow(c);
+  spaced(c, 'WISHES YOU A', 266, '300 22px Poppins', 10, '#cfc6ff');
+  cText(c, 'Happy Diwali', 398, s => `400 ${s}px "DM Serif Display"`, 132, '#fdecc8');
+  let y = rich(c, [{ t: 'आप सभी को ', font: '400 33px "Tiro Devanagari Hindi"', fill: '#e6dcff' }, { t: name, font: '400 35px "Rozha One"', fill: '#ff9a4a' }, { t: ' की\u00A0तरफ\u00A0से ढेर\u00A0सारी\u00A0शुभकामनाएं', font: '400 33px "Tiro Devanagari Hindi"', fill: '#e6dcff' }], 464, 900, 48);
+  if (msg) y = rich(c, [{ t: msg, font: 'italic 500 29px "Playfair Display"', fill: '#d9d0ff' }], y + 4, 860, 40);
+  const top = y + 10, h = IH - 60 - top, w = h * 400 / 450;
+  c.drawImage(await svgToImage(firstSvg(sceneMidnight(name, msg)), w, h), (IW - w) / 2, top);
+  footer(c, 'rgba(220,210,255,.5)');
+}
+
+const IMG_DRAW = { deepawali: imgDeepawali, lantern: imgLantern, doors: imgDoors, midnight: imgMidnight };
+async function makeImage(name, key, msg) {
+  await Promise.all(IMG_FONTS.map(f => document.fonts.load(f, 'शुभ दीपावली Aa ' + name).catch(() => {})));
+  const cv = document.createElement('canvas'); cv.width = IW; cv.height = IH;
+  const c = cv.getContext('2d'); c.textBaseline = 'alphabetic';
+  sr = seeded(hash(name + key + msg));
+  await IMG_DRAW[key](c, name, msg);
+  sr = Math.random;
+  return new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png'));
+}
+
+// Bottom sheet that shows the generated picture with Copy / Download / Share
+function imageSheet(name, key, msg) {
+  const slug = slugify(name) || 'greeting';
+  const el = document.createElement('div'); el.className = 'imgsheet';
+  el.innerHTML = `<div class="is-card" role="dialog" aria-modal="true" aria-label="Greeting image">
+    <button class="is-x" type="button" aria-label="Close">✕</button>
+    <p class="is-t">आपकी शुभकामना तस्वीर <span>Your greeting image · ${esc(TEMPLATES[key].name)}</span></p>
+    <div class="is-img"><div class="is-spin"><i></i>तस्वीर बन रही है… <small>Creating your image</small></div><img alt="Diwali greeting image from ${esc(name)}"></div>
+    <div class="is-act"><button type="button" data-i="copy" disabled>📋 Copy image</button><button type="button" data-i="save" disabled>⬇ Download</button><button type="button" data-i="share" disabled hidden>⤴ Share</button></div>
+    <p class="is-hint">${isTouch ? 'Tip: you can also press and hold the image to save or copy it.' : 'Paste it straight into WhatsApp, Instagram or an email.'}</p></div>`;
+  document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('open'));
+  let url = null, file = null;
+  const blobP = makeImage(name, key, msg);
+  blobP.then(blob => {
+    url = URL.createObjectURL(blob); const img = $('img', el); img.onload = () => el.classList.add('ready'); img.src = url;
+    file = new File([blob], `diwali-${slug}.png`, { type: 'image/png' });
+    el.querySelectorAll('[data-i]').forEach(b => b.disabled = false);
+    if (navigator.canShare && navigator.canShare({ files: [file] })) $('[data-i=share]', el).hidden = false;
+  }).catch(() => { $('.is-spin', el).textContent = 'Sorry, the image could not be created. Please try again.'; });
+  const onKey = e => e.key === 'Escape' && close();
+  const close = () => { el.classList.remove('open'); removeEventListener('keydown', onKey); setTimeout(() => { el.remove(); url && URL.revokeObjectURL(url); }, 300); };
+  addEventListener('keydown', onKey);
+  el.addEventListener('click', async e => {
+    if (e.target === el || e.target.closest('.is-x')) return close();
+    const b = e.target.closest('[data-i]'); if (!b || b.disabled) return;
+    if (b.dataset.i === 'copy') {
+      try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobP })]); toast('Image copied! Paste it anywhere 🪔'); }
+      catch (err) { console.warn('Image copy failed:', err); toast(isTouch ? 'Press and hold the image to copy it' : 'Copying isn’t supported here — use Download'); }
+    }
+    if (b.dataset.i === 'save') { const a = document.createElement('a'); a.href = url; a.download = `diwali-${slug}.png`; document.body.appendChild(a); a.click(); a.remove(); }
+    if (b.dataset.i === 'share') { try { await navigator.share({ files: [file], text: `🪔 ${name} की तरफ से दीपावली की शुभकामनाएं` }); } catch {} }
+  });
+}
+
 /* ----------------------------------------------- opening: tap to light diya */
 function gate(name, onDone) {
   const root = $('#app');
@@ -486,12 +694,14 @@ function greet(name, key, msg, embed) {
   ctrl.innerHTML = embed ? '' : `
     <button data-a="replay" title="Replay" aria-label="Replay">↻ <span>Replay</span></button>
     <button data-a="sound" title="Toggle sound" aria-label="Toggle sound"><b>🔕</b> <span>Sound</span></button>
+    <button data-a="image" title="Greeting image" aria-label="Greeting image">🖼 <span>Image</span></button>
     <button data-a="share" title="Share" aria-label="Share">⤴ <span>Share</span></button>
     <a href="/" class="make">✨ <span>Make your own</span></a>`;
   const syncSound = () => { const b = $('[data-a=sound] b', ctrl); if (b) b.textContent = soundOn ? '🔔' : '🔕'; };
   ctrl.onclick = async e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.a === 'replay') play();
+    if (b.dataset.a === 'image') imageSheet(name, key, msg);
     if (b.dataset.a === 'sound') { if (soundOn) soundOn = false; else { enableSound(); bell(3, .1); } syncSound(); }
     if (b.dataset.a === 'share') {
       const data = { title: `${name} wishes you a Happy Diwali`, text: `🪔 ${name} ने आपको दीपावली की शुभकामनाएं भेजी हैं`, url };
@@ -525,7 +735,8 @@ function home() {
         <fieldset class="tpls"><legend>Choose a style</legend>${tcards}</fieldset>
         <label class="fld"><span>Personal message <em>(optional)</em></span><input id="ms" maxlength="90" placeholder="May this Diwali bring you light and joy" enterkeyhint="done"></label>
         <div class="linkbox"><span id="lk"></span><button type="button" id="cp">Copy</button></div>
-        <div class="actions"><a class="btn pri" id="go" target="_blank" rel="noopener">▶ Open greeting</a><a class="btn wa" id="wa" target="_blank" rel="noopener">Share on WhatsApp</a></div>
+        <div class="actions"><a class="btn pri" id="go" target="_blank" rel="noopener">▶ Open greeting</a><a class="btn wa" id="wa" target="_blank" rel="noopener">Share on WhatsApp</a>
+          <button type="button" class="btn img" id="mk">🖼 Get greeting image <small>Copy · Download · Share</small></button></div>
       </form>
       <aside class="phonewrap rv"><div class="phone"><iframe id="pv" title="Live preview" tabindex="-1"></iframe></div><p>Live preview</p></aside>
     </div>
@@ -556,14 +767,17 @@ function home() {
     $('.live-hi').textContent = pretty || 'आपके अपने'; $('.live-en').textContent = pretty || 'Your Name';
     document.querySelectorAll('.tcard').forEach(c => c.classList.toggle('sel', c.querySelector('input').checked));
     $('#go').href = s.path; $('#wa').href = 'https://wa.me/?text=' + encodeURIComponent(`🪔 ${pretty || 'Someone'} ने आपको दीपावली की शुभकामनाएं भेजी हैं! ${s.full}`);
-    $('#go').classList.toggle('off', !s.slug); $('#wa').classList.toggle('off', !s.slug);
+    ['#go', '#wa', '#mk'].forEach(id => $(id).classList.toggle('off', !s.slug));
     // the live preview iframe is only shown on wide screens, so phones skip loading it
     if (getComputedStyle($('.phonewrap')).display !== 'none') { clearTimeout(deb); deb = setTimeout(() => { pv.src = s.path + (s.path.includes('?') ? '&' : '?') + 'embed=1'; }, now ? 0 : 700); }
   };
   $('#f').addEventListener('input', () => update(false));
   $('#f').addEventListener('change', () => update(false));
   $('#f').addEventListener('submit', e => { e.preventDefault(); document.activeElement && document.activeElement.blur(); });
-  $('.actions').addEventListener('click', e => { if (e.target.closest('.off')) { e.preventDefault(); nm.focus(); toast('Enter your name first'); } });
+  $('.actions').addEventListener('click', e => {
+    if (e.target.closest('.off')) { e.preventDefault(); nm.focus(); toast('Enter your name first'); return; }
+    if (e.target.closest('#mk')) imageSheet(prettify(state().slug), $('input[name=tpl]:checked').value, ms.value.trim().slice(0, 90));
+  });
   $('#cp').onclick = async () => { if (!state().slug) { nm.focus(); return toast('Enter your name first'); } try { await navigator.clipboard.writeText(state().full); toast('Link copied!'); } catch { prompt('Copy this link', state().full); } };
   const fit = () => { const w = phone.parentElement.clientWidth; phone.style.setProperty('--k', Math.min(.8, w / 390)); update(true); };
   addEventListener('resize', fit); fit();
