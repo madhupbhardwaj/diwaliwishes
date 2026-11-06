@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diwali Wishes — send your own animated greeting</title>
+<meta name="description" content="Create a beautiful animated Diwali greeting with your name and share it with a link.">
+<meta property="og:title" content="Happy Diwali 🪔">
+<meta property="og:description" content="Open this link for an animated Diwali greeting.">
+<meta name="theme-color" content="#1a0510">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪔%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Poppins:wght@300;400;500;600&family=Yellowtail&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="home">
+<div id="app"></div>
+<canvas id="fx"></canvas>
+<div id="ctrl" aria-label="Greeting controls"></div>
+<div id="toast" role="status"></div>
+<div class="grain"></div>
+<!-- hidden helper used to sample points along a path -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><path id="measp"/></svg>
+<script src="/app.js"></script>
+</body>
+</html>
