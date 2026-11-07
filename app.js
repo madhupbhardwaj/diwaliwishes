@@ -27,7 +27,7 @@ const graphemes = s => (window.Intl && Intl.Segmenter) ? [...new Intl.Segmenter(
 // Split text into animatable spans. Devanagari is split by word only, so conjuncts and matras stay intact.
 const letters = (txt, extra = '') => (isDeva(txt) ? txt.split(/(\s+)/).filter(Boolean) : graphemes(txt)).map((c, i) =>
   `<span class="ch ${extra}" style="--i:${i}">${c.trim() === '' ? '&nbsp;' : esc(c)}</span>`).join('');
-const hiLine = name => `आप सभी को <b class="nm">${esc(name)}</b> की तरफ से ढेर सारी शुभकामनाएं`;
+const BLESSING = 'May the light of a thousand diyas fill your home with love, laughter & prosperity.';
 const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200); };
 const isTouch = matchMedia('(pointer:coarse)').matches;
 
@@ -218,16 +218,16 @@ function mandala() {
   return out;
 }
 // The big festive block shared by the home hero and the Shubh Deepawali template
-function festive(nameHi, nameEn, msg, live) {
+function festive(name, msg, live) {
   return `
     <p class="badge">✦ दीपावली महोत्सव <span>· FESTIVAL OF LIGHTS</span></p>
     <div class="bigw"><h1 class="big">शुभ दीपावली</h1></div>
     <p class="happy">HAPPY DIWALI</p>
     <div class="hcard" id="wish">
-      <p class="hl1">आप सभी को <b class="nm${live ? ' live-hi' : ''}">${esc(nameHi)}</b> की तरफ से</p>
-      <p class="hl2">ढेर सारी शुभकामनाएं</p>
+      <p class="hl1"><b class="nm${live ? ' live-nm' : ''}">${esc(name)}</b> wishes you</p>
+      <p class="hl2">a very Happy Diwali</p>
       ${divider()}
-      <p class="en"><b class="${live ? 'live-en' : ''}">${esc(nameEn)}</b> wishes you a Happy Diwali — may your year sparkle with love, laughter &amp; light.</p>
+      <p class="en">${esc(BLESSING)}</p>
       ${msg ? `<p class="msg">“${esc(msg)}”</p>` : ''}
     </div>
     <div class="drow">${diya('', 0)}${diya('mid', .45)}${diya('', .9)}<div class="sparkler"><i></i><b class="spk-tip"></b></div></div>`;
@@ -238,7 +238,7 @@ function sceneDeepawali(name, msg) {
   return `<section class="sc t4 fest">
     <svg class="bgm" viewBox="8 208 384 384" aria-hidden="true"><g class="rot">${mandala()}</g></svg>
     ${toranHTML(11)}
-    <div class="col">${festive(name, name, msg)}</div>
+    <div class="col">${festive(name, msg)}</div>
   </section>`;
 }
 function runDeepawali() {
@@ -276,7 +276,7 @@ function sceneLantern(name, msg) {
       <div class="t1-wish">wishes you a</div>
       <div class="t1-happy">Happy</div>
       <div class="t1-diwali">Diwali</div>
-      <p class="t1-hi">${hiLine(name)}</p>
+      <p class="t1-hi">${esc(BLESSING)}</p>
       ${msg ? `<p class="t1-msg">${esc(msg)}</p>` : ''}
     </div>
   </section>`;
@@ -343,7 +343,6 @@ function sceneDoors(name, msg) {
       <div class="t2-wish">wishes you a</div>
       <div class="t2-happy">${letters('HAPPY', 'h')}</div>
       <div class="t2-diwali">${letters('Diwali', 'd')}</div>
-      <p class="t2-hi">${hiLine(name)}</p>
       <p class="t2-tag">${msg ? esc(msg) : 'May every home glow with joy.'}</p>
     </div>
     <svg viewBox="0 0 400 470" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -405,7 +404,7 @@ function sceneMidnight(name, msg) {
       <div class="t3-name">${letters(name)}</div>
       <div class="t3-wish">wishes you a</div>
       <div class="t3-happy">${letters('Happy Diwali', 'h')}</div>
-      <p class="t3-hi">${hiLine(name)}</p>
+      <p class="t3-hi">${esc(BLESSING)}</p>
       ${msg ? `<p class="t3-tag">${esc(msg)}</p>` : ''}
     </div>
     <svg viewBox="0 0 400 450" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
@@ -518,11 +517,11 @@ async function imgDeepawali(c, name, msg) {
   burst(c, 170, 340, 150, ['#ffd36a', '#fff1c1', '#ffb347']); burst(c, 930, 300, 125, ['#ff7ad9', '#ffd1f0', '#ffffff']);
   burst(c, 70, 975, 55, ['#7ef0c4', '#d6fff0', '#ffd36a']);
   // measure the message card first so the diyas can sit below it
-  const F = { hi: '400 50px "Tiro Devanagari Hindi"', nm: '400 52px "Rozha One"', en: 'italic 500 31px "Cormorant Garamond"', enB: '600 31px "Cormorant Garamond"', msg: 'italic 500 33px "Cormorant Garamond"' };
+  const F = { ln: '500 50px "Playfair Display"', nm: '400 74px Yellowtail', en: 'italic 500 33px "Cormorant Garamond"', msg: 'italic 500 33px "Cormorant Garamond"' };
   const nameGold = (x0, x1) => gradX(c, x0, x1, ['#e9a93a', '#ffd36a', '#fff2c8', '#ffd36a']);
-  const line1 = [{ t: 'आप सभी को ', font: F.hi, fill: '#fff4e2' }, { t: name, font: F.nm, fill: nameGold }, { t: ' की\u00A0तरफ\u00A0से', font: F.hi, fill: '#fff4e2' }];
-  const enSeg = [{ t: name, font: F.enB, fill: '#f3c766' }, { t: ' wishes you a Happy Diwali — may your year sparkle with love, laughter & light.', font: F.en, fill: 'rgba(255,236,210,.78)' }];
-  const layout = dry => { let y = rich(c, line1, 650, 780, 70, dry); y = rich(c, [{ t: 'ढेर सारी शुभकामनाएं', font: F.hi, fill: '#fff4e2' }], y, 780, 70, dry); const dy = y + 6; y = rich(c, enSeg, y + 62, 760, 42, dry); if (msg) y = rich(c, [{ t: `“${msg}”`, font: F.msg, fill: '#ffd9a0' }], y + 8, 760, 44, dry); return [dy, y]; };
+  const line1 = [{ t: name, font: F.nm, fill: nameGold }, { t: ' wishes\u00A0you', font: F.ln, fill: '#fff4e2' }];
+  const enSeg = [{ t: BLESSING, font: F.en, fill: 'rgba(255,236,210,.8)' }];
+  const layout = dry => { let y = rich(c, line1, 655, 780, 74, dry); y = rich(c, [{ t: 'a very Happy Diwali', font: F.ln, fill: '#fff4e2' }], y, 780, 66, dry); const dy = y + 6; y = rich(c, enSeg, y + 62, 760, 42, dry); if (msg) y = rich(c, [{ t: `“${msg}”`, font: F.msg, fill: '#ffd9a0' }], y + 8, 760, 44, dry); return [dy, y]; };
   const [divY, endY] = layout(true), cardB = endY + 6, shift = Math.min(70, Math.max(0, cardB + 25 - 1000));
   let art = `<svg viewBox="0 0 1080 1350"><g class="m" transform="translate(${540 - 200 * 2.4} ${650 - 400 * 2.4}) scale(2.4)">${mandala()}</g><path class="tstr" d="M-20 40 Q540 210 1100 40"/>`;
   for (let i = 0; i < 11; i++) {
@@ -569,7 +568,7 @@ async function imgLantern(c, name, msg) {
   spaced(c, 'WISHES YOU A', 578, '300 20px Poppins', 9, '#ffe0d0');
   cText(c, 'Happy', 668, s => `400 ${s}px Yellowtail`, 66, '#ffffff');
   glow(c, 'rgba(255,210,90,.6)', 30); cText(c, 'Diwali', 848, s => `400 ${s}px Yellowtail`, 205, (a, b) => gradX(c, a, b, ['#ffe95c', '#ffc23d', '#fff6c8', '#ffc23d', '#ff9f4a']), 520); noGlow(c);
-  let y = rich(c, [{ t: 'आप सभी को ', font: '400 31px "Tiro Devanagari Hindi"', fill: '#ffeadf' }, { t: name, font: '400 33px "Rozha One"', fill: '#ffe45a' }, { t: ' की\u00A0तरफ\u00A0से ढेर\u00A0सारी\u00A0शुभकामनाएं', font: '400 31px "Tiro Devanagari Hindi"', fill: '#ffeadf' }], 918, 440, 48);
+  let y = rich(c, [{ t: BLESSING, font: 'italic 500 32px "Cormorant Garamond"', fill: '#ffeadf' }], 918, 430, 42);
   if (msg) rich(c, [{ t: msg, font: 'italic 500 26px "Playfair Display"', fill: '#ffe9dc' }], y + 10, 420, 38);
   footer(c, 'rgba(255,230,220,.6)');
 }
@@ -582,7 +581,7 @@ async function imgDoors(c, name, msg) {
   cText(c, 'wishes you a', 168, s => `italic 500 ${s}px "Playfair Display"`, 30, ink);
   spaced(c, 'HAPPY', 232, '500 32px "Playfair Display"', 20, ink);
   cText(c, 'Diwali', 400, s => `500 ${s}px "Playfair Display"`, 180, ink);
-  let y = rich(c, [{ t: 'आप सभी को ', font: '400 33px "Tiro Devanagari Hindi"', fill: ink }, { t: name, font: '400 35px "Rozha One"', fill: '#7d1d2c' }, { t: ' की\u00A0तरफ\u00A0से ढेर\u00A0सारी\u00A0शुभकामनाएं', font: '400 33px "Tiro Devanagari Hindi"', fill: ink }], 466, 900, 48);
+  let y = 470;
   y = rich(c, [{ t: msg || 'May every home glow with joy.', font: 'italic 500 30px "Playfair Display"', fill: ink }], y + 4, 880, 40);
   STATIC = true; const svg = firstSvg(sceneDoors(name, msg)); STATIC = false;
   const top = y + 10, h = IH - 60 - top, w = h * 400 / 470;
@@ -599,7 +598,7 @@ async function imgMidnight(c, name, msg) {
   glow(c, 'rgba(255,140,60,.6)', 26); cText(c, name, 212, s => `400 ${s}px Yellowtail`, 96, '#ff9a4a'); noGlow(c);
   spaced(c, 'WISHES YOU A', 266, '300 22px Poppins', 10, '#cfc6ff');
   cText(c, 'Happy Diwali', 398, s => `400 ${s}px "DM Serif Display"`, 132, '#fdecc8');
-  let y = rich(c, [{ t: 'आप सभी को ', font: '400 33px "Tiro Devanagari Hindi"', fill: '#e6dcff' }, { t: name, font: '400 35px "Rozha One"', fill: '#ff9a4a' }, { t: ' की\u00A0तरफ\u00A0से ढेर\u00A0सारी\u00A0शुभकामनाएं', font: '400 33px "Tiro Devanagari Hindi"', fill: '#e6dcff' }], 464, 900, 48);
+  let y = rich(c, [{ t: BLESSING, font: 'italic 500 34px "Cormorant Garamond"', fill: '#e6dcff' }], 462, 860, 44);
   if (msg) y = rich(c, [{ t: msg, font: 'italic 500 29px "Playfair Display"', fill: '#d9d0ff' }], y + 4, 860, 40);
   const top = y + 10, h = IH - 60 - top, w = h * 400 / 450;
   c.drawImage(await svgToImage(firstSvg(sceneMidnight(name, msg)), w, h), (IW - w) / 2, top);
@@ -647,7 +646,7 @@ function imageSheet(name, key, msg) {
       catch (err) { console.warn('Image copy failed:', err); toast(isTouch ? 'Press and hold the image to copy it' : 'Copying isn’t supported here — use Download'); }
     }
     if (b.dataset.i === 'save') { const a = document.createElement('a'); a.href = url; a.download = `diwali-${slug}.png`; document.body.appendChild(a); a.click(); a.remove(); }
-    if (b.dataset.i === 'share') { try { await navigator.share({ files: [file], text: `🪔 ${name} की तरफ से दीपावली की शुभकामनाएं` }); } catch {} }
+    if (b.dataset.i === 'share') { try { await navigator.share({ files: [file], text: `🪔 ${name} wishes you a Happy Diwali!` }); } catch {} }
   });
 }
 
@@ -704,7 +703,7 @@ function greet(name, key, msg, embed) {
     if (b.dataset.a === 'image') imageSheet(name, key, msg);
     if (b.dataset.a === 'sound') { if (soundOn) soundOn = false; else { enableSound(); bell(3, .1); } syncSound(); }
     if (b.dataset.a === 'share') {
-      const data = { title: `${name} wishes you a Happy Diwali`, text: `🪔 ${name} ने आपको दीपावली की शुभकामनाएं भेजी हैं`, url };
+      const data = { title: `${name} wishes you a Happy Diwali`, text: `🪔 ${name} wishes you a Happy Diwali!`, url };
       try { if (navigator.share) await navigator.share(data); else throw 0; } catch (err) { if (err && err.name === 'AbortError') return; try { await navigator.clipboard.writeText(url); toast('Link copied!'); } catch { prompt('Copy this link', url); } }
     }
   };
@@ -724,7 +723,7 @@ function home() {
   <section class="hero fest">
     <svg class="bgm" viewBox="8 208 384 384" aria-hidden="true"><g class="rot">${mandala()}</g></svg>
     ${toranHTML(11)}
-    <div class="col">${festive('आपके अपने', 'Your Name', '', true)}
+    <div class="col">${festive('Your Name', '', true)}
       <a class="cta" href="#create">✦ अपने नाम का बनाएं</a></div>
   </section>
   <section class="create" id="create">
@@ -764,9 +763,9 @@ function home() {
   const update = now => {
     const s = state(), pretty = s.slug ? prettify(s.slug) : '';
     lk.textContent = s.full;
-    $('.live-hi').textContent = pretty || 'आपके अपने'; $('.live-en').textContent = pretty || 'Your Name';
+    $('.live-nm').textContent = pretty || 'Your Name';
     document.querySelectorAll('.tcard').forEach(c => c.classList.toggle('sel', c.querySelector('input').checked));
-    $('#go').href = s.path; $('#wa').href = 'https://wa.me/?text=' + encodeURIComponent(`🪔 ${pretty || 'Someone'} ने आपको दीपावली की शुभकामनाएं भेजी हैं! ${s.full}`);
+    $('#go').href = s.path; $('#wa').href = 'https://wa.me/?text=' + encodeURIComponent(`🪔 ${pretty || 'Someone'} wishes you a Happy Diwali! Open your greeting: ${s.full}`);
     ['#go', '#wa', '#mk'].forEach(id => $(id).classList.toggle('off', !s.slug));
     // the live preview iframe is only shown on wide screens, so phones skip loading it
     if (getComputedStyle($('.phonewrap')).display !== 'none') { clearTimeout(deb); deb = setTimeout(() => { pv.src = s.path + (s.path.includes('?') ? '&' : '?') + 'embed=1'; }, now ? 0 : 700); }

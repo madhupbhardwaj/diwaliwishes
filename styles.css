@@ -54,7 +54,7 @@ body.home #app{position:relative;z-index:1}
 .fest{--t0:0s}
 .bgm{position:absolute;left:50%;top:54%;width:min(115vw,100dvh);transform:translate(-50%,-50%);opacity:.6;z-index:0;pointer-events:none}
 .bgm path,.bgm circle{fill:none;stroke:rgba(255,170,90,.15);stroke-width:1}
-.fest .col{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:clamp(6px,1.5dvh,16px);text-align:center;padding:calc(clamp(70px,14dvh,160px) + var(--sat)) max(16px,var(--sar)) calc(2dvh + var(--sab)) max(16px,var(--sal))}
+.fest .col{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:clamp(6px,1.5dvh,16px);text-align:center;padding:calc(clamp(64px,12dvh,130px)*.62 + clamp(30px,6.2vw,104px)*.9 + 14px + var(--sat)) max(16px,var(--sar)) calc(2dvh + var(--sab)) max(16px,var(--sal))}
 /* auto margins centre the block when it fits and let it scroll when it doesn't */
 .fest .col>:first-child{margin-top:auto}.fest .col>:last-child{margin-bottom:auto}
 .t4 .col{overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -69,9 +69,9 @@ body.home #app{position:relative;z-index:1}
 @keyframes trackIn{from{opacity:0;letter-spacing:1.4em;filter:blur(6px)}to{opacity:1;letter-spacing:.5em;filter:blur(0)}}
 .hcard{width:min(680px,100%);padding:clamp(12px,2.2dvh,28px) clamp(16px,3vw,36px);border-radius:24px;border:1px solid rgba(243,199,102,.2);background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.02));-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 20px 60px rgba(0,0,0,.35);opacity:0;animation:cardIn 1s cubic-bezier(.2,.8,.2,1) calc(var(--t0) + 3s) forwards}
 @keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
-.hl1,.hl2{font:400 clamp(19px,3.4dvh,36px)/1.5 var(--deva);color:#fff4e2;opacity:0;animation:fadeUp .9s cubic-bezier(.2,.8,.2,1) calc(var(--t0) + 3.3s) forwards}
+.hl1,.hl2{font:500 clamp(20px,3.4dvh,36px)/1.45 'Playfair Display',serif;color:#fff4e2;opacity:0;animation:fadeUp .9s cubic-bezier(.2,.8,.2,1) calc(var(--t0) + 3.3s) forwards}
 .hl2{animation-delay:calc(var(--t0) + 3.7s)}
-.nm{font-family:var(--rozha);font-weight:400;padding:0 .08em;background:linear-gradient(100deg,#e9a93a 0%,#ffd36a 30%,#fff2c8 45%,#ffd36a 60%,#e9a93a 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;-webkit-box-decoration-break:clone;box-decoration-break:clone;animation:shimmer 3.5s linear infinite}
+.nm{font-family:'Yellowtail',var(--rozha),cursive;font-weight:400;font-size:1.5em;line-height:1;padding:0 .12em;background:linear-gradient(100deg,#e9a93a 0%,#ffd36a 30%,#fff2c8 45%,#ffd36a 60%,#e9a93a 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;-webkit-box-decoration-break:clone;box-decoration-break:clone;animation:shimmer 3.5s linear infinite}
 .divd{display:flex;align-items:center;justify-content:center;gap:10px;margin:clamp(4px,1dvh,10px) 0;opacity:0;animation:fadeIn 1s calc(var(--t0) + 4s) forwards}
 .divd i{width:clamp(30px,8vw,70px);height:1px;background:linear-gradient(90deg,transparent,rgba(243,199,102,.6),transparent)}
 .divd svg{width:clamp(18px,3dvh,26px);height:clamp(18px,3dvh,26px)}
@@ -136,8 +136,7 @@ body.home #app{position:relative;z-index:1}
 .t1-diwali{font:400 calc(var(--s)*92)/1.05 'Yellowtail',cursive;margin-top:calc(var(--s)*-8);padding:0 .15em .12em;display:inline-block;background:linear-gradient(100deg,#ffe95c 0%,#ffc23d 30%,#fff6c8 45%,#ffc23d 60%,#ff9f4a 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;-webkit-clip-path:inset(0 100% 0 0);clip-path:inset(0 100% 0 0);animation:wipe 1.9s cubic-bezier(.6,0,.2,1) 3.3s forwards,glow 3s 5.2s ease-in-out infinite alternate,shimmer 4s linear 5.2s infinite}
 @keyframes wipe{to{-webkit-clip-path:inset(0 -5% 0 0);clip-path:inset(0 -5% 0 0)}}
 @keyframes glow{from{filter:drop-shadow(0 0 4px rgba(255,210,90,.2))}to{filter:drop-shadow(0 0 18px rgba(255,210,90,.75))}}
-.t1-hi{font:400 calc(var(--s)*17)/1.6 var(--deva);color:#ffeadf;max-width:calc(var(--s)*270);margin:calc(var(--s)*6) auto 0;opacity:0;animation:fadeUp 1.2s 5s forwards}
-.t1-hi .nm{font-size:1.1em}
+.t1-hi{font:italic 500 calc(var(--s)*17)/1.45 var(--corm);color:#ffeadf;max-width:calc(var(--s)*270);margin:calc(var(--s)*6) auto 0;opacity:0;animation:fadeUp 1.2s 5s forwards}
 .t1-msg{font:italic 400 calc(var(--s)*13)/1.5 'Playfair Display',serif;color:#ffe9dc;max-width:calc(var(--s)*230);margin:calc(var(--s)*10) auto 0;opacity:0;animation:fadeIn 1.2s 5.6s forwards}
 .lanterns{position:absolute;inset:0;pointer-events:none}
 .lantern{position:absolute;bottom:-140px;width:calc(38px*var(--sz));height:calc(52px*var(--sz));animation:rise var(--dur) linear var(--dl) infinite;opacity:0}
@@ -190,7 +189,7 @@ body.home #app{position:relative;z-index:1}
 .t3-wish{font:300 clamp(11px,1.7dvh,14px) 'Poppins';letter-spacing:.4em;text-transform:uppercase;color:#cfc6ff;opacity:0;animation:fadeIn 1s 2.6s forwards;margin:4px 0 6px}
 .t3-happy{font:400 clamp(34px,7.2dvh,72px)/1.05 'DM Serif Display',serif;color:#fdecc8;--d:3s}
 .t3-happy .ch{animation-name:dropIn;animation-duration:1s;animation-timing-function:cubic-bezier(.3,1.4,.5,1)}
-.t3-hi{font:400 clamp(14px,2.2dvh,19px)/1.5 var(--deva);color:#e6dcff;margin-top:clamp(4px,1dvh,10px);opacity:0;animation:fadeUp 1s 4.2s forwards}
+.t3-hi{font:italic 500 clamp(15px,2.4dvh,21px)/1.4 var(--corm);max-width:560px;margin-left:auto;margin-right:auto;color:#e6dcff;margin-top:clamp(4px,1dvh,10px);opacity:0;animation:fadeUp 1s 4.2s forwards}
 .t3-tag{font:italic 400 clamp(13px,2dvh,17px)/1.4 'Playfair Display',serif;color:#d9d0ff;margin-top:6px;opacity:0;animation:fadeIn 1.2s 4.8s forwards}
 .t3 svg{flex:1;min-height:0;width:100%;margin-top:clamp(0px,1dvh,10px)}
 .t3 .halo{opacity:0;transform-origin:200px 215px;animation:haloIn 2.4s cubic-bezier(.2,.8,.2,1) 1.1s forwards,breathe 5s 3.5s ease-in-out infinite alternate}
@@ -216,7 +215,7 @@ body.home #app{position:relative;z-index:1}
 @media(hover:hover){.nav div a:hover{color:var(--gold)}}
 .hero{--t0:-.5s;position:relative;min-height:100vh;min-height:100dvh;overflow:hidden}
 .hero .toran{top:calc(58px + var(--sat))}
-.hero .col{min-height:100vh;min-height:100dvh;padding-top:calc(clamp(130px,22dvh,220px) + var(--sat));padding-bottom:40px}
+.hero .col{min-height:100vh;min-height:100dvh;padding-top:calc(58px + clamp(64px,12dvh,130px)*.62 + clamp(30px,6.2vw,104px)*.9 + 18px + var(--sat));padding-bottom:40px}
 .cta{display:inline-flex;align-items:center;gap:8px;margin-top:clamp(4px,1.5dvh,14px);padding:14px 30px;border-radius:99px;background:linear-gradient(135deg,#ffc23d,#ff7a2f);color:#3a0a12;text-decoration:none;font:400 18px/1 var(--deva);box-shadow:0 10px 30px rgba(255,140,40,.4);opacity:0;animation:fadeUp .8s calc(var(--t0) + 5.6s) forwards,ctaPulse 2.4s ease-in-out 7s infinite;transition:transform .2s}
 @media(hover:hover){.cta:hover{transform:translateY(-2px)}}
 @keyframes ctaPulse{0%,100%{box-shadow:0 10px 30px rgba(255,140,40,.4)}50%{box-shadow:0 10px 50px rgba(255,170,60,.75)}}
