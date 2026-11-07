@@ -2,5 +2,11 @@
   "rewrites": [
     { "source": "/:name", "destination": "/index.html" },
     { "source": "/:name/:style", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(app.js|styles.css)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=604800" }]
+    }
   ]
 }

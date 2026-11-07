@@ -61,13 +61,14 @@ function boom(vol = 0.22) {
   s.connect(f).connect(g).connect(actx.destination); s.start();
 }
 let timers = [];
-const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+let speed = 1; // >1 fast-forwards scene timers, particles and CSS animations (preview only)
+const at = (ms, fn) => timers.push(setTimeout(fn, ms / speed));
 const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
 /* ----------------------------------------------------------- particle engine */
 const PALS = [['#ffd36a', '#fff1c1', '#ffb347'], ['#ff6b6b', '#ffd36a', '#ff9a3c'], ['#ff7ad9', '#ffd1f0', '#ffffff'], ['#7ef0c4', '#d6fff0', '#ffd36a'], ['#9ab6ff', '#ffffff', '#ffd36a']];
 const FX = {
-  c: $('#fx'), ps: [], raf: 0, emit: null, t0: 0, last: 0, click: null,
+  c: $('#fx'), ps: [], raf: 0, emit: null, t0: 0, t: 0, rate: 1, last: 0, click: null,
   init() {
     this.x = this.c.getContext('2d');
     const rs = () => {
@@ -81,15 +82,15 @@ const FX = {
     document.addEventListener('visibilitychange', () => { this.last = performance.now(); });
   },
   start(emit, click) {
-    this.stop(); this.emit = emit; this.click = click; this.t0 = performance.now(); this.last = this.t0;
+    this.stop(); this.emit = emit; this.click = click; this.t0 = performance.now(); this.last = this.t0; this.t = 0; this.rate = speed;
     const loop = now => { this.raf = requestAnimationFrame(loop); this.step(now); };
     this.raf = requestAnimationFrame(loop);
   },
   stop() { cancelAnimationFrame(this.raf); this.ps = []; this.emit = this.click = null; this.x && this.x.clearRect(0, 0, this.w, this.h); },
   add(p) { if (this.ps.length < (isTouch ? 700 : 1200)) this.ps.push({ x: 0, y: 0, vx: 0, vy: 0, g: 0, age: 0, max: 3, size: 4, rot: 0, vr: 0, type: 'spark', color: '#fff', sway: 0, ...p }); },
   step(now) {
-    const dt = Math.min((now - this.last) / 1000, 0.05); this.last = now;
-    const t = (now - this.t0) / 1000;
+    const dt = Math.min((now - this.last) / 1000, 0.05) * this.rate; this.last = now;
+    const t = (this.t += dt);
     this.emit && this.emit(dt, t, this);
     const x = this.x; x.clearRect(0, 0, this.w, this.h);
     const pops = [], trail = [];
@@ -616,6 +617,13 @@ async function makeImage(name, key, msg) {
   return new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png'));
 }
 
+// Same name + style + message → reuse the finished picture instead of drawing it again
+const imgCache = new Map();
+function getImage(name, key, msg) {
+  const k = `${name}|${key}|${msg}`;
+  if (!imgCache.has(k)) { const p = makeImage(name, key, msg); p.catch(() => imgCache.delete(k)); imgCache.set(k, p); }
+  return imgCache.get(k);
+}
 // Bottom sheet that shows the generated picture with Copy / Download / Share
 function imageSheet(name, key, msg) {
   const slug = slugify(name) || 'greeting';
@@ -628,7 +636,7 @@ function imageSheet(name, key, msg) {
     <p class="is-hint">${isTouch ? 'Tip: you can also press and hold the image to save or copy it.' : 'Paste it straight into WhatsApp, Instagram or an email.'}</p></div>`;
   document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('open'));
   let url = null, file = null;
-  const blobP = makeImage(name, key, msg);
+  const blobP = getImage(name, key, msg);
   blobP.then(blob => {
     url = URL.createObjectURL(blob); const img = $('img', el); img.onload = () => el.classList.add('ready'); img.src = url;
     file = new File([blob], `diwali-${slug}.png`, { type: 'image/png' });
@@ -684,8 +692,15 @@ function greet(name, key, msg, embed) {
   const root = $('#app'), ctrl = $('#ctrl');
   const play = () => {
     clearTimers(); ctrl.classList.remove('show');
+    // in the live preview, play the intro 3x faster so the finished card shows up within ~2s
+    speed = embed ? 3 : 1;
     root.innerHTML = SCENES[key][0](name, msg);
     SCENES[key][1]();
+    if (embed) {
+      const anims = document.getAnimations(); anims.forEach(a => a.playbackRate = 3);
+      clearTimeout(greet.slow); greet.slow = setTimeout(() => { speed = 1; FX.rate = 1; anims.forEach(a => { try { a.playbackRate = 1; } catch {} }); }, 1800);
+    }
+    speed = 1;
     syncSound();
     if (!embed) at(6800, () => ctrl.classList.add('show'));
   };
@@ -749,17 +764,29 @@ function home() {
     if (sp) sparkler(fx, dt);
   }, null);
   FX.nf = 1;
+  // fetch the image fonts in the background so the first greeting image is quick
+  (window.requestIdleCallback || (f => setTimeout(f, 2500)))(() => IMG_FONTS.forEach(f => document.fonts.load(f, 'शुभ दीपावली Aa').catch(() => {})));
 
   const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('in')), { threshold: .1 });
   document.querySelectorAll('.rv').forEach(el => io.observe(el));
 
   const nm = $('#nm'), ms = $('#ms'), lk = $('#lk'), pv = $('#pv'), phone = $('.phone');
   const state = () => {
-    const slug = slugify(nm.value), tpl = $('input[name=tpl]:checked').value, m = ms.value.trim();
+    const slug = slugify(nm.value), tpl = $('input[name=tpl]:checked').value, m = ms.value.trim().slice(0, 90);
     const path = `/${encodeURIComponent(slug || 'your-name')}/${tpl}` + (m ? `?m=${encodeURIComponent(m)}` : '');
-    return { slug, path, full: location.origin + path };
+    return { slug, tpl, m, path, full: location.origin + path };
   };
-  let deb;
+  // The preview page loads once; after that each change is posted to it and it redraws instantly.
+  let deb, pvLoaded = false, pvSent = '';
+  const pvData = s => ({ type: 'preview', name: s.slug ? prettify(s.slug) : 'Your Name', key: s.tpl, msg: s.m });
+  const sendPv = () => {
+    if (getComputedStyle($('.phonewrap')).display === 'none') return; // hidden on phones: never load it
+    const s = state(), d = pvData(s), sig = JSON.stringify(d);
+    if (!pv.getAttribute('src')) { pvSent = sig; pv.src = s.path + (s.path.includes('?') ? '&' : '?') + 'embed=1'; return; }
+    if (!pvLoaded || sig === pvSent) return;
+    pvSent = sig; pv.contentWindow.postMessage(d, location.origin);
+  };
+  pv.addEventListener('load', () => { pvLoaded = true; sendPv(); });
   const update = now => {
     const s = state(), pretty = s.slug ? prettify(s.slug) : '';
     lk.textContent = s.full;
@@ -768,14 +795,15 @@ function home() {
     $('#go').href = s.path; $('#wa').href = 'https://wa.me/?text=' + encodeURIComponent(`🪔 ${pretty || 'Someone'} wishes you a Happy Diwali! Open your greeting: ${s.full}`);
     ['#go', '#wa', '#mk'].forEach(id => $(id).classList.toggle('off', !s.slug));
     // the live preview iframe is only shown on wide screens, so phones skip loading it
-    if (getComputedStyle($('.phonewrap')).display !== 'none') { clearTimeout(deb); deb = setTimeout(() => { pv.src = s.path + (s.path.includes('?') ? '&' : '?') + 'embed=1'; }, now ? 0 : 700); }
+    clearTimeout(deb); deb = setTimeout(sendPv, now ? 0 : 250);
   };
-  $('#f').addEventListener('input', () => update(false));
-  $('#f').addEventListener('change', () => update(false));
+  // style buttons update the preview immediately; typing waits a quarter second
+  $('#f').addEventListener('input', e => update(e.target.type === 'radio'));
+  $('#f').addEventListener('change', e => update(e.target.type === 'radio'));
   $('#f').addEventListener('submit', e => { e.preventDefault(); document.activeElement && document.activeElement.blur(); });
   $('.actions').addEventListener('click', e => {
     if (e.target.closest('.off')) { e.preventDefault(); nm.focus(); toast('Enter your name first'); return; }
-    if (e.target.closest('#mk')) imageSheet(prettify(state().slug), $('input[name=tpl]:checked').value, ms.value.trim().slice(0, 90));
+    if (e.target.closest('#mk')) { const s = state(); imageSheet(prettify(s.slug), s.tpl, s.m); }
   });
   $('#cp').onclick = async () => { if (!state().slug) { nm.focus(); return toast('Enter your name first'); } try { await navigator.clipboard.writeText(state().full); toast('Link copied!'); } catch { prompt('Copy this link', state().full); } };
   const fit = () => { const w = phone.parentElement.clientWidth; phone.style.setProperty('--k', Math.min(.8, w / 390)); update(true); };
@@ -791,7 +819,13 @@ function route() {
   else if (parts.length && !['create', 'index.html', '404.html'].includes(parts[0])) { name = parts[0]; tpl = parts[1]; }
   if (!name) return home();
   const pretty = prettify(name.slice(0, 30)) || 'A friend';
-  greet(pretty, TEMPLATES[tpl] ? tpl : KEYS[hash(name) % KEYS.length], (q.get('m') || '').slice(0, 90), q.has('embed'));
+  const embed = q.has('embed');
+  greet(pretty, TEMPLATES[tpl] ? tpl : KEYS[hash(name) % KEYS.length], (q.get('m') || '').slice(0, 90), embed);
+  if (embed) addEventListener('message', e => {
+    const d = e.data;
+    if (e.origin !== location.origin || !d || d.type !== 'preview') return;
+    greet(String(d.name || 'Your Name').slice(0, 30), TEMPLATES[d.key] ? d.key : KEYS[0], String(d.msg || '').slice(0, 90), true);
+  });
 }
 
 FX.init(); route();
