@@ -754,8 +754,7 @@ function home() {
       </form>
       <aside class="phonewrap rv"><div class="phone"><iframe id="pv" title="Live preview" tabindex="-1"></iframe></div><p>Live preview</p></aside>
     </div>
-  </section>
-  <footer>दीपावली की हार्दिक शुभकामनाएं · Made with 🪔</footer>`;
+  </section>`;
 
   let sp = false; setTimeout(() => sp = true, 4700);
   FX.start((dt, t, fx) => {

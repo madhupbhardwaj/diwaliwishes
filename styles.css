@@ -221,7 +221,7 @@ body.home #app{position:relative;z-index:1}
 @keyframes ctaPulse{0%,100%{box-shadow:0 10px 30px rgba(255,140,40,.4)}50%{box-shadow:0 10px 50px rgba(255,170,60,.75)}}
 .rv{opacity:0;transform:translateY(30px);transition:opacity 1s,transform 1s cubic-bezier(.2,.8,.2,1)}
 .rv.in{opacity:1;transform:none}
-.create{position:relative;padding:50px max(20px,var(--sar)) 10px max(20px,var(--sal));scroll-margin-top:10px}
+.create{position:relative;padding:50px max(20px,var(--sar)) calc(30px + var(--sab)) max(20px,var(--sal));scroll-margin-top:10px}
 .create h2{text-align:center;font:400 clamp(30px,5vw,50px)/1.3 var(--rozha);color:var(--gold)}
 .create h2 small{display:block;font:italic 500 clamp(16px,2vw,20px) var(--corm);color:#e9c9cf}
 .creator{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:34px;max-width:1000px;margin:30px auto 40px;align-items:start}
