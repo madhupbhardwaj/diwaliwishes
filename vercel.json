@@ -1,12 +1,19 @@
 {
   "rewrites": [
-    { "source": "/:name", "destination": "/index.html" },
-    { "source": "/:name/:style", "destination": "/index.html" }
+    { "source": "/:name/:style", "destination": "/api/greet?n=:name&s=:style" },
+    { "source": "/:name", "destination": "/api/greet?n=:name" }
   ],
+  "functions": {
+    "api/greet.js": { "includeFiles": "index.html" }
+  },
   "headers": [
     {
       "source": "/(app.js|styles.css)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=604800" }]
+    },
+    {
+      "source": "/og/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
     }
   ]
 }
